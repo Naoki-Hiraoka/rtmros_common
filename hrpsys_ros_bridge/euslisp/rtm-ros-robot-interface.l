@@ -1722,6 +1722,11 @@
     "Set SoftErrorLimiter servo error limit [rad] with given name."
     (send self :softerrorlimiterservice_setservoerrorlimit :name name :limit limit)
     )
+  (:set-torque-limit
+   (name limit)
+   "Set SoftErrorLimiter torque limit [Nm] with given name."
+   (send self :softerrorlimiterservice_settaulimit :name name :limit limit)
+   )
   )
 
 ;; StabilizerService
