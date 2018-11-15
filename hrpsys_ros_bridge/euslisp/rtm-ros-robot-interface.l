@@ -1744,7 +1744,7 @@
   (:set-st-param
    (&rest args
     &key st-algorithm
-         eefm-pos-damping-gain eefm-rot-damping-gain eefm-pos-time-const-support eefm-rot-time-const eefm-swing-pos-spring-gain eefm-swing-pos-time-const eefm-swing-rot-spring-gain eefm-swing-rot-time-const eefm-ee-forcemoment-distribution-weight
+         eefm-pos-damping-gain eefm-rot-damping-gain eefm-pos-time-const-support eefm-rot-time-const eefm-swing-pos-spring-gain eefm-swing-pos-time-const eefm-swing-rot-spring-gain eefm-swing-rot-time-const eefm-ee-forcemoment-distribution-weight mcs-pos-damping-gain mcs-rot-damping-gain mcs-pos-time-const mcs-rot-time-const mcs-ee-forcemoment-distribution-weight
     &allow-other-keys)
    "Set Stabilizer parameters.
     For arguments, please see (send *ri* :get-st-param-arguments)."
@@ -1797,6 +1797,26 @@
                  (let ((tmp (send prm :eefm_ee_forcemoment_distribution_weight)))
                    (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-ee-forcemoment-distribution-weight))
                    (list :eefm-ee-forcemoment-distribution-weight tmp)))
+	     (if (and (memq :mcs-pos-damping-gain args) mcs-pos-damping-gain)
+                 (let ((tmp (send prm :mcs_pos_damping_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector mcs-pos-damping-gain))
+                   (list :mcs-pos-damping-gain tmp)))
+             (if (and (memq :mcs-rot-damping-gain args) mcs-rot-damping-gain)
+                 (let ((tmp (send prm :mcs_rot_damping_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector mcs-rot-damping-gain))
+                   (list :mcs-rot-damping-gain tmp)))
+             (if (and (memq :mcs-rot-time-const args) mcs-rot-time-const)
+                 (let ((tmp (send prm :mcs_rot_time_const)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector mcs-rot-time-const))
+                   (list :mcs-rot-time-const tmp)))
+             (if (and (memq :mcs-pos-time-const args) mcs-pos-time-const)
+                 (let ((tmp (send prm :mcs_pos_time_const)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector mcs-pos-time-const))
+                   (list :mcs-pos-time-const tmp)))
+	     (if (and (memq :mcs-ee-forcemoment-distribution-weight args) mcs-ee-forcemoment-distribution-weight)
+                 (let ((tmp (send prm :mcs_ee_forcemoment_distribution_weight)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector mcs-ee-forcemoment-distribution-weight))
+                   (list :mcs-ee-forcemoment-distribution-weight tmp)))
              args))))
   (:set-st-param-for-non-feedback-LIP-mode
    ()
