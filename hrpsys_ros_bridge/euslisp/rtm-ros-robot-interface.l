@@ -2217,6 +2217,34 @@
     ))
   )
 
+;;  VirtualForceSensorService
+(defmethod rtm-ros-robot-interface
+  (:remove-external-force-offset
+   (&key ((:time tm) 8.0))
+   "remove offsets on outputs from external force/torque .
+    Please keep the robot static and make sure that robot's non-sensor surface do not contact with any objects.
+    Argument:
+      time is duration of calibration[s]. 8.0[s] by default.
+    Return:
+      t if set successfully, nil otherwise"
+   (send self :virtualforcesensorservice_removeexternalforceoffset
+         :tm tm))
+  (:remove-virtual-force-sensor-offset
+   (&key (names) ((:time tm) 8.0))
+   "remove offsets on sensor outputs form virtual force/torque sensors.
+    Please keep the robot static and make sure that robot's sensors do not contact with any objects.
+    Argument:
+      names is list of sensor names to be calibrated.
+      If not specified, all sensors are calibrated by default.
+      time is duration of calibration[s]. 8.0[s] by default.
+    Return:
+      t if set successfully, nil otherwise"
+   (send self :virtualforcesensorservice_removeexternalforceoffset
+	 :names names
+	 :tm tm))
+  )
+
+
 (defmethod rtm-ros-robot-interface
   (:print-rtc-param-all
    ()
