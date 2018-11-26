@@ -133,7 +133,7 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
   // Force Sensor Settings
   coil::vstring virtual_force_sensor = coil::split(prop["virtual_force_sensor"], ",");
   int npforce = body->numSensors(hrp::Sensor::FORCE);
-  int nvforce = virtual_force_sensor.size()/10;
+  int nvforce = virtual_force_sensor.size()/15;
   int nforce  = npforce + nvforce;
   m_rsforce.resize(nforce);
   m_rsforceIn.resize(nforce);
@@ -209,12 +209,11 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
 
   // Virtual Force Sensor Settings
   for(unsigned int j = 0, i = npforce; j < nvforce; j++, i++ ){
-    std::string name = virtual_force_sensor[j*10+0];
-    std::string base = virtual_force_sensor[j*10+1];
-    std::string target = virtual_force_sensor[j*10+2];
+    std::string name = virtual_force_sensor[j*15+0];
+    std::string target = virtual_force_sensor[j*15+1];
     hrp::dvector tr(7);
     for (int k = 0; k < 7; k++ ) {
-        coil::stringTo(tr[k], virtual_force_sensor[j*10+3+k].c_str());
+        coil::stringTo(tr[k], virtual_force_sensor[j*15+2+k].c_str());
     }
     // virtual force and moment
     m_rsforceIn[i] = new InPort<TimedDoubleSeq>(name.c_str(), m_rsforce[i]);
@@ -232,9 +231,6 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
     registerInPort(std::string("ref_"+name).c_str(), *m_mcforceIn[i]);
     m_mcforceName.push_back(std::string("ref_"+name).c_str());
 
-	if ( ! body->link(base) ) {
-	  std::cerr << "ERROR : unknown link : " << base << std::endl;
-	}
 	if ( ! body->link(target) ) {
 	  std::cerr << "ERROR : unknown link : " << target << std::endl;
 	}
@@ -252,7 +248,7 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
     }
     sensor_info[name] = si;
 
-    std::cerr << i << " virtual force sensor : " << name << ": "  << base << "," << target << std::endl;
+    std::cerr << i << " virtual force sensor : " << name << ", " << target << std::endl;
   }
 
   int nacc = body->numSensors(hrp::Sensor::ACCELERATION);
