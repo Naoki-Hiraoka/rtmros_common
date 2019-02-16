@@ -1732,6 +1732,11 @@
    "Set SoftErrorLimiter servo velocity limit [rad/s] with given name."
    (send self :softerrorlimiterservice_setvelocitylimit :name name :limit limit)
    )
+  (:set-passive-joint
+   (name ispassive)
+   "Set SoftErrorLimiter ispassive [bool] with given name."
+   (send self :softerrorlimiterservice_setpassivejoint :name name :ispassive ispassive)
+   )
   )
 
 ;; StabilizerService
