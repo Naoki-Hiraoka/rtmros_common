@@ -1892,6 +1892,21 @@
    "Stop Stabilizer Mode."
    (send self :stabilizerservice_stopstabilizer)
    )
+  (:setpassivejoint
+   (name)
+   "set Passive joint."
+   (send self :stabilizerservice_setpassivejoint :name name)
+   )
+  (:setreferencejoint
+   (name)
+   "set Reference joint."
+   (send self :stabilizerservice_setreferencejoint :name name)
+   )
+  (:setactivejoint
+   (name)
+   "set Active joint."
+   (send self :stabilizerservice_setactivejoint :name name)
+   )
   )
 
 ;; KalmanFilterService
