@@ -2239,8 +2239,8 @@
       time is duration of calibration[s]. 8.0[s] by default.
     Return:
       t if set successfully, nil otherwise"
-   (send self :virtualforcesensorservice_removeexternalforceoffset
-	 :names names
+   (send self :virtualforcesensorservice_removevirtualforcesensoroffset
+	 :sensornames names
 	 :tm tm))
   )
 
