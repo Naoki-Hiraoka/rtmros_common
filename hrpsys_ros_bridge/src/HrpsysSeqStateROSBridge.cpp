@@ -780,7 +780,7 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridge::onExecute(RTC::UniqueId ec_id)
         }
         s.remaining_time = m_controlSwingSupportTime.data[i];
         refCSs.states[i].header.stamp = refCSs.header.stamp;
-        refCSs.states[i].header.frame_id = m_rsforceName[i];
+        refCSs.states[i].header.frame_id = m_ceeName[i];
         refCSs.states[i].state = s;
       }
       ref_contact_states_pub.publish(refCSs);
@@ -810,7 +810,7 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridge::onExecute(RTC::UniqueId ec_id)
           s.state = s.OFF;
         }
         actCSs.states[i].header.stamp = actCSs.header.stamp;
-        actCSs.states[i].header.frame_id = m_rsforceName[i];
+        actCSs.states[i].header.frame_id = m_ceeName[i];
         actCSs.states[i].state = s;
       }
       act_contact_states_pub.publish(actCSs);

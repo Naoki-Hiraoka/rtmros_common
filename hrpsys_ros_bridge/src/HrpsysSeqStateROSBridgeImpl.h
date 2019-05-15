@@ -154,7 +154,7 @@ class HrpsysSeqStateROSBridgeImpl  : public RTC::DataFlowComponentBase
   InPort<TimedBooleanSeq> m_refContactStatesIn, m_actContactStatesIn;
   TimedDoubleSeq m_controlSwingSupportTime;
   InPort<TimedDoubleSeq> m_controlSwingSupportTimeIn;
-
+  std::vector<std::string> m_ceeName;
   // </rtc-template>
 
   // DataOutPort declaration

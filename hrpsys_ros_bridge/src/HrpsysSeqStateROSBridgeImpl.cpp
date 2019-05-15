@@ -348,6 +348,17 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
     }
   }
 
+  coil::vstring contact_end_effectors_str = coil::split(prop["contact_end_effectors"], ",");
+  if (contact_end_effectors_str.size() > 0) {
+    size_t prop_num = 10;
+    size_t num = contact_end_effectors_str.size()/prop_num;
+    for (size_t i = 0; i < num; i++) {
+      std::string ee_name;
+      coil::stringTo(ee_name, contact_end_effectors_str[i*prop_num].c_str());
+      m_ceeName.push_back(ee_name);
+    }
+  }
+
   // </rtc-template>
   return RTC::RTC_OK;
 }
