@@ -2242,6 +2242,24 @@
    (send self :virtualforcesensorservice_removevirtualforcesensoroffset
 	 :sensornames names
 	 :tm tm))
+  (:start-virtual-force-sensor
+   (&key (name))
+   "start virtual force sensor estimation
+    Argument:
+      name of sensor to start
+    Return:
+      t if set successfully, nil otherwise"
+   (send self :virtualforcesensorservice_startestimation
+         :sensorname name))
+  (:stop-virtual-force-sensor
+   (&key (name))
+   "stop virtual force sensor estimation
+    Argument:
+      name of sensor to start
+    Return:
+      t if set successfully, nil otherwise"
+   (send self :virtualforcesensorservice_stopestimation
+	 :sensorname name))
   )
 
 
