@@ -339,6 +339,16 @@ def execHrpsysConfiguratorCommand(command_str):
         hcf=setupHrpsysConfigurator()
         exec command_str
 
+def execHrpsysConfiguratorCommands(command_strs):
+    global hcf
+    for command_str in command_strs:
+        try:
+            exec command_str
+        except:
+            print >>sys.stderr, "Button execution for ", command_str, "failed, perhaps because of CORBA connection. Retry it once after resetting HrpsysConfigurator."
+            hcf=setupHrpsysConfigurator()
+            exec command_str
+
 # HrpsysDashboard definition
 class HrpsysDashboard(Dashboard):
   """
