@@ -157,14 +157,12 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridge::onInitialize() {
   act_cp_pub = nh.advertise<geometry_msgs::PointStamped>("/act_capture_point", 10);
   ref_contact_states_pub = nh.advertise<hrpsys_ros_bridge::ContactStatesStamped>("/ref_contact_states", 10);
   act_contact_states_pub = nh.advertise<hrpsys_ros_bridge::ContactStatesStamped>("/act_contact_states", 10);
-  cop_pub.resize(m_mcforceName.size());
-  for (unsigned int i=0; i<m_mcforceName.size(); i++){
-    std::string tmpname(m_mcforceName[i]); // "ref_xx"
-    tmpname.erase(0,4); // Remove "ref_"
+  cop_pub.resize(cop_link_info.size());
+  for (unsigned int i=0; i<cop_link_info.size(); i++){
+    std::string tmpname(m_rsforceName[i]);
     cop_pub[i] = nh.advertise<geometry_msgs::PointStamped>(tmpname+"_cop", 10);
   }
   em_mode_pub = nh.advertise<std_msgs::Int32>("emergency_mode", 10);
-
   return RTC::RTC_OK;
 }
 
@@ -825,9 +823,8 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridge::onExecute(RTC::UniqueId ec_id)
     try {
       m_rsCOPInfoIn.read();
       //ROS_DEBUG_STREAM("[" << getInstanceName() << "] @onExecute " << m_rsforceName[i] << " size = " << m_rsforce[i].data.length() );
-      for (size_t i = 0; i < m_mcforceIn.size(); i++) {
-        std::string tmpname = m_mcforceName[i]; // "ref_xx"
-        tmpname.erase(0,4); // Remove "ref_"
+      for (size_t i = 0; i < cop_link_info.size(); i++) {
+        std::string tmpname = m_rsforceName[i];
         if (cop_link_info.find(tmpname) == cop_link_info.end()) continue;
         double fz = m_rsCOPInfo.data[i*3+2];
         if (fz < 1e-3) continue; // If fz is small, do not publish COP.

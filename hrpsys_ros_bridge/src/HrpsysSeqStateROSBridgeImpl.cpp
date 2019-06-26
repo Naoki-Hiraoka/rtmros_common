@@ -339,20 +339,15 @@ RTC::ReturnCode_t HrpsysSeqStateROSBridgeImpl::onInitialize()
   if (contact_end_effectors_str.size() > 0) {
     size_t prop_num = 10;
     size_t num = contact_end_effectors_str.size()/prop_num;
-    cop_link_info.clear();
     for (size_t i = 0; i < num; i++) {
       std::string ee_name;
       coil::stringTo(ee_name, contact_end_effectors_str[i*prop_num].c_str());
       m_ceeName.push_back(ee_name);
-      COPLinkInfo ci;
-      ci.link_name = ee_name + "_end_coords"; // Link name for tf frame
-      ci.cop_offset_z = 0;
-      cop_link_info.insert(std::pair<std::string, COPLinkInfo>(ee_name + "Wrench", ci));
     }
   }
 
-  m_mcforce.resize(nforce);
-  m_mcforceIn.resize(nforce);
+  m_mcforce.resize(m_ceeName.size());
+  m_mcforceIn.resize(m_ceeName.size());
   for (unsigned int i=0; i<m_ceeName.size(); i++){
     // ref force and moment
     m_mcforceIn[i] = new InPort<TimedDoubleSeq>(std::string("ref_" + m_ceeName[i]+"Wrench").c_str(), m_mcforce[i]);

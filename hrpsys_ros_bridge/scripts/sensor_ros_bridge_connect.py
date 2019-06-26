@@ -15,7 +15,7 @@ import OpenHRP
 
 program_name = '[sensor_ros_bridge_connect.py] '
 
-def connecSensorRosBridgePort(url, rh, bridge, vs, rmfo, sh, es, rfu, subscription_type = "new", push_policy = 'all', push_rate = 50.0):
+def connecSensorRosBridgePort(url, rh, bridge, vs, rmfo, sh, es, rfu, seq, subscription_type = "new", push_policy = 'all', push_rate = 50.0):
     print program_name, "connecSensorRosBridgePort(", url, ",", rh.name(), ")"
     for sen in hcf.getSensors(url):
         print program_name, "sensor(name: ", sen.name, ", type:", sen.type, ")"
@@ -35,7 +35,7 @@ def connecSensorRosBridgePort(url, rh, bridge, vs, rmfo, sh, es, rfu, subscripti
             connectPorts(vs.port(vfp), bridge.port(vfp), subscription_type, rate=push_rate, pushpolicy=push_policy)
             #print program_name, "connect ", vfp, sh.port(vfp+"Out").get_port_profile().name, bridge.port("ref_"+vfp).get_port_profile().name
             #connectPorts(sh.port(vfp+"Out"), bridge.port("ref_" + vfp), subscription_type, rate=push_rate, pushpolicy=push_policy) # for reference forces
-    for sen in filter(lambda x: x[-9:]=="WrenchRef", hcf.seq.ports.keys()):
+    for sen in filter(lambda x: x[-9:]=="WrenchRef", seq.ports.keys()):
         if bridge.port("ref_" + sen[:-3]): # for reference forces
             if rfu != None and rfu.port("ref_"+sen[:-3]+"Out"):
                 print program_name, "connect ", sen[:-3], rfu.port("ref_"+sen[:-3]+"Out").get_port_profile().name, bridge.port("ref_" + sen[:-3]).get_port_profile().name
@@ -70,7 +70,8 @@ def initSensorRosBridgeConnection(url, simulator_name, rosbridge_name, managerho
     rmfo=rtm.findRTC('rmfo')
     es=rtm.findRTC('es')
     rfu=rtm.findRTC('rfu')
-    connecSensorRosBridgePort(url, hcf.rh, bridge, vs, rmfo, sh, es, rfu, subscription_type, push_policy, push_rate)
+    seq=rtm.findRTC('seq')
+    connecSensorRosBridgePort(url, hcf.rh, bridge, vs, rmfo, sh, es, rfu, seq, subscription_type, push_policy, push_rate)
 
 if __name__ == '__main__':
     print program_name, "start"
