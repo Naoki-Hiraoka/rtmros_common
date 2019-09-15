@@ -2218,6 +2218,11 @@
   )
 
 ;;  VirtualForceSensorService
+(def-set-get-param-method
+  'hrpsys_ros_bridge::Openhrp_VirtualForceSensorService_vsParam
+  :set-vs-param :get-vs-param :get-vs-param-arguments
+  :virtualforcesensorservice_setparameter :virtualforcesensorservice_getparameter)
+
 (defmethod rtm-ros-robot-interface
   (:remove-external-force-offset
    (&key ((:time tm) 8.0))
