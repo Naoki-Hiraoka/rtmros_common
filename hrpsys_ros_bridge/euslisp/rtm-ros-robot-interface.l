@@ -1907,6 +1907,22 @@
    "set Active joint."
    (send self :stabilizerservice_setactivejoint :name name)
    )
+  (:get-is-ik-enables
+   ()
+   (send (send self :stabilizerservice_getisikenables) :i_param)
+   )
+  (:set-is-ik-enables
+   (i-param)
+   (send self :stabilizerservice_setisikenables :i_param i-param)
+   )
+  (:get-is-ik-enable
+   (name)
+   (send (send self :stabilizerservice_getisikenable :name name) :i_param)
+   )
+  (:set-is-ik-enable
+   (name i-param)
+   (send self :stabilizerservice_setisikenable :name name :i_param i-param)
+   )
   )
 
 ;; KalmanFilterService
