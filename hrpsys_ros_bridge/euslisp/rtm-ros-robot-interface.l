@@ -1923,6 +1923,10 @@
    (name i-param)
    (send self :stabilizerservice_setisikenable :name name :i_param i-param)
    )
+  (:use-remote-stabilizer
+   (use)
+   (send self :stabilizerservice_useremotestabilizer :use use)
+   )
   )
 
 ;; KalmanFilterService
