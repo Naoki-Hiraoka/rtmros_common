@@ -20,6 +20,7 @@
   <arg name="USE_WALKING" default="false" />
   <arg name="USE_COLLISIONCHECK" default="true" />
   <arg name="USE_IMPEDANCECONTROLLER" default="false" />
+  <arg name="USE_REMOVEFORCESENSORLINKOFFSET" default="false" />
   <arg name="USE_GRASPCONTROLLER" default="false" />
   <arg name="USE_SERVOCONTROLLER" default="false" />
   <arg name="USE_TORQUECONTROLLER" default="false" />
@@ -196,11 +197,15 @@
   <group if="$(arg USE_IMPEDANCECONTROLLER)" >
     <node pkg="hrpsys_ros_bridge" name="ImpedanceControllerServiceROSBridge" type="ImpedanceControllerServiceROSBridgeComp"
           output="screen" args ="$(arg openrtm_args)" />
-    <node pkg="hrpsys_ros_bridge" name="RemoveForceSensorLinkOffsetServiceROSBridge" type="RemoveForceSensorLinkOffsetServiceROSBridgeComp"
-          output="$(arg OUTPUT)" args="$(arg openrtm_args)" />
 
     <rtconnect from="ImpedanceControllerServiceROSBridge.rtc:ImpedanceControllerService" to="ic.rtc:ImpedanceControllerService"  subscription_type="new"/>
     <rtactivate component="ImpedanceControllerServiceROSBridge.rtc" />
+  </group>
+
+  <group if="$(arg USE_REMOVEFORCESENSORLINKOFFSET)" >
+    <node pkg="hrpsys_ros_bridge" name="RemoveForceSensorLinkOffsetServiceROSBridge" type="RemoveForceSensorLinkOffsetServiceROSBridgeComp"
+          output="$(arg OUTPUT)" args="$(arg openrtm_args)" />
+
     <rtconnect from="RemoveForceSensorLinkOffsetServiceROSBridge.rtc:RemoveForceSensorLinkOffsetService" to="rmfo.rtc:RemoveForceSensorLinkOffsetService"  subscription_type="new"/>
     <rtactivate component="RemoveForceSensorLinkOffsetServiceROSBridge.rtc" />
   </group>
