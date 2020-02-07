@@ -106,6 +106,33 @@ class HrpsysRTCDMenu(MenuDashWidget):
   def on_stop_rtcd(self):
     Popen(['bash', '-c', self.stop_command])
 
+class HrpsysRemoteStabilizerMenu(MenuDashWidget):
+  """
+  a button to start/stop remotestabilizer
+  """
+  def __init__(self, remotestabilizer_start_command, remotestabilizer_stop_command):
+    icon_path = '/usr/share/icons/Humanity/apps/32/news-feed.svg'
+    icons = [['bg-grey.svg', icon_path],
+             ['bg-green.svg', icon_path],
+             ['bg-red.svg', icon_path]]
+    super(HrpsysRemoteStabilizerMenu, self).__init__('remotestabilizer', icons)
+    self.update_state(0)
+    self.remotestabilizer_start_command = remotestabilizer_start_command
+    self.remotestabilizer_stop_command = remotestabilizer_stop_command
+    if self.remotestabilizer_start_command:
+      self.add_action('start remotestabilizer', self.on_start_remotestabilizer)
+    if self.remotestabilizer_stop_command:
+      self.add_action('stop remotestabilizer', self.on_stop_remotestabilizer)
+    self.setFixedSize(self._icons[0].actualSize(QSize(50, 30)))
+  def on_start_remotestabilizer(self):
+    Popen(['bash', '-c', self.remotestabilizer_start_command])
+    time.sleep(5)
+    execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(True)")
+  def on_stop_remotestabilizer(self):
+    execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(False)")
+    time.sleep(1)
+    Popen(['bash', '-c', self.remotestabilizer_stop_command])
+
 
 class HrpsysROSBridgeMenu(MenuDashWidget):
   """
@@ -387,6 +414,12 @@ class HrpsysDashboard(Dashboard):
       self._ros_bridge = HrpsysROSBridgeMenu(ros_bridge_start_command, ros_bridge_stop_command)
     else:
       self._ros_bridge = None
+    remotestabilizer_start_command = rospy.get_param('hrpsys_remotestabilizer_start_command', None)
+    remotestabilizer_stop_command = rospy.get_param('hrpsys_remotestabilizer_stop_command', None)
+    if remotestabilizer_stop_command or remotestabilizer_start_command:
+      self._remotestabilizer = HrpsysRemoteStabilizerMenu(remotestabilizer_start_command, remotestabilizer_stop_command)
+    else:
+      self._remotestabilizer = None
     self._power = None
     #self._power = HrpsysPowerMenu()
     self._servo = HrpsysServoMenu(rospy.get_param('hrpsys_servo_start_command', None),
@@ -398,6 +431,8 @@ class HrpsysDashboard(Dashboard):
       widgets.append(self._rtcd)
     if self._ros_bridge:
       widgets.append(self._ros_bridge)
+    if self._remotestabilizer:
+      widgets.append(self._remotestabilizer)
     if self._power:
       widgets.append(self._power)
     if self._servo:
