@@ -126,11 +126,7 @@ class HrpsysRemoteStabilizerMenu(MenuDashWidget):
     self.setFixedSize(self._icons[0].actualSize(QSize(50, 30)))
   def on_start_remotestabilizer(self):
     Popen(['bash', '-c', self.remotestabilizer_start_command])
-    time.sleep(5)
-    execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(True)")
   def on_stop_remotestabilizer(self):
-    execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(False)")
-    time.sleep(1)
     Popen(['bash', '-c', self.remotestabilizer_stop_command])
 
 
@@ -280,6 +276,23 @@ class DefaultUnstableControllersMenu(MenuDashWidget):
     def on_st_abc_ic_off(self):
          self.update_state(2)
          execHrpsysConfiguratorCommand("hcf.stopDefaultUnstableControllers()")
+
+class RemoteStabilizerMenu(MenuDashWidget):
+    def __init__(self):
+        icons = [['bg-grey.svg', 'ic-runstop-off.svg'],
+                 ['bg-green.svg', 'ic-runstop-on.svg'],
+                 ['bg-red.svg', 'ic-runstop-off.svg']]
+        super(RemoteStabilizerMenu, self).__init__('RemoteStabilizer on/off', icons)
+        self.update_state(0)
+        self.add_action('start RemoteStabilizer', self.on_rs_on)
+        self.add_action('stop RemoteStabilizer', self.on_rs_off)
+        self.setFixedSize(self._icons[0].actualSize(QSize(50, 30)))
+    def on_rs_on(self):
+         self.update_state(1)
+         execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(True)")
+    def on_rs_off(self):
+         self.update_state(2)
+         execHrpsysConfiguratorCommand("hcf.st_svc.useRemoteStabilizer(False)")
 
 class StabilizerMenu(MenuDashWidget):
     def __init__(self):
