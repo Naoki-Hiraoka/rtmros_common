@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     lst = yaml.load(open(inputfile).read())
 
-    limb_candidates = ('larm', 'rarm', 'lleg', 'rleg', 'torso', 'head') ## candidates of limb names
+    limb_candidates = ('larm', 'rarm', 'lleg', 'rleg', 'torso', 'head', 'rhand', 'lhand') ## candidates of limb names
 
     invalid_yaml = True
     for l in lst.keys():
