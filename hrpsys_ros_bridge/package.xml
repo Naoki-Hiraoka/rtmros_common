@@ -93,6 +93,7 @@
   <run_depend>tf</run_depend>
   <run_depend>visualization_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>topic_tools</run_depend>
   <!-- <test_depend>hrpsys</test_depend> -->
   <!-- <test_depend>hrpsys_tools</test_depend> -->
   <!-- <test_depend>openrtm_tools</test_depend> -->
