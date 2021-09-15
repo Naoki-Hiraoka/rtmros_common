@@ -30,6 +30,7 @@
   <arg name="USE_REFERENCEFORCEUPDATER" default="false" />
   <arg name="USE_OBJECTCONTACTTURNAROUNDDETECTOR" default="false" />
   <arg name="USE_AUTOBALANCESTABILIZER" default="false" />
+  <arg name="USE_STATEHOLDERTFORM" default="$(eval (not arg('USE_WALKING')) and (not arg('USE_AUTOBALANCESTABILIZER')))" />
   <arg name="USE_HRPSYS_PROFILE" default="true" />
   <arg name="USE_VELOCITY_OUTPUT" default="false" doc="true: output actual velocity / false: output differential value of actual postition as /joint_states/velocity"/>
   <arg name="PUBLISH_SENSOR_TF" default="true" />
@@ -98,7 +99,7 @@
   <env name="push_policy" value="$(arg push_policy)" />
   <env name="push_rate" value="$(arg push_rate)" />
   <env name="buffer_length" value="$(arg buffer_length)" />
-  <node name="rtmlaunch_hrpsys_ros_bridge" pkg="openrtm_tools" type="rtmlaunch.py" args="$(find hrpsys_ros_bridge)/launch/hrpsys_ros_bridge.launch USE_COMMON=$(arg USE_COMMON) USE_WALKING=$(arg USE_WALKING) USE_COLLISIONCHECK=$(arg USE_COLLISIONCHECK) USE_IMPEDANCECONTROLLER=$(arg USE_IMPEDANCECONTROLLER) USE_SOFTERRORLIMIT=$(arg USE_SOFTERRORLIMIT) USE_IMAGESENSOR=$(arg USE_IMAGESENSOR) USE_ROBOTHARDWARE=$(arg USE_ROBOTHARDWARE) USE_GRASPCONTROLLER=$(arg USE_GRASPCONTROLLER) USE_SERVOCONTROLLER=$(arg USE_SERVOCONTROLLER) USE_TORQUECONTROLLER=$(arg USE_TORQUECONTROLLER) USE_TORQUEFILTER=$(arg USE_TORQUEFILTER) USE_EMERGENCYSTOPPER=$(arg USE_EMERGENCYSTOPPER) USE_REFERENCEFORCEUPDATER=$(arg USE_REFERENCEFORCEUPDATER) USE_OBJECTCONTACTTURNAROUNDDETECTOR=$(arg USE_OBJECTCONTACTTURNAROUNDDETECTOR) USE_AUTOBALANCESTABILIZER=$(arg USE_AUTOBALANCESTABILIZER) USE_VELOCITY_OUTPUT=$(arg USE_VELOCITY_OUTPUT)" output="$(arg OUTPUT)"/>
+  <node name="rtmlaunch_hrpsys_ros_bridge" pkg="openrtm_tools" type="rtmlaunch.py" args="$(find hrpsys_ros_bridge)/launch/hrpsys_ros_bridge.launch USE_COMMON=$(arg USE_COMMON) USE_WALKING=$(arg USE_WALKING) USE_COLLISIONCHECK=$(arg USE_COLLISIONCHECK) USE_IMPEDANCECONTROLLER=$(arg USE_IMPEDANCECONTROLLER) USE_SOFTERRORLIMIT=$(arg USE_SOFTERRORLIMIT) USE_IMAGESENSOR=$(arg USE_IMAGESENSOR) USE_ROBOTHARDWARE=$(arg USE_ROBOTHARDWARE) USE_GRASPCONTROLLER=$(arg USE_GRASPCONTROLLER) USE_SERVOCONTROLLER=$(arg USE_SERVOCONTROLLER) USE_TORQUECONTROLLER=$(arg USE_TORQUECONTROLLER) USE_TORQUEFILTER=$(arg USE_TORQUEFILTER) USE_EMERGENCYSTOPPER=$(arg USE_EMERGENCYSTOPPER) USE_REFERENCEFORCEUPDATER=$(arg USE_REFERENCEFORCEUPDATER) USE_OBJECTCONTACTTURNAROUNDDETECTOR=$(arg USE_OBJECTCONTACTTURNAROUNDDETECTOR) USE_AUTOBALANCESTABILIZER=$(arg USE_AUTOBALANCESTABILIZER) USE_STATEHOLDERTFORM=$(arg USE_STATEHOLDERTFORM) USE_VELOCITY_OUTPUT=$(arg USE_VELOCITY_OUTPUT)" output="$(arg OUTPUT)"/>
 
 
   <!-- All Robots -->
@@ -123,7 +124,7 @@
     <rtconnect from="$(arg SIMULATOR_NAME_VELOCITY).rtc:dq" to="HrpsysSeqStateROSBridge0.rtc:rsvel" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)" if="$(arg USE_VELOCITY_OUTPUT)" />
     <rtconnect from="$(arg SIMULATOR_NAME_TORQUE).rtc:tau"  to="HrpsysSeqStateROSBridge0.rtc:rstorque" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)" unless="$(arg USE_TORQUEFILTER)"/>
     <rtconnect from="StateHolderServiceROSBridge.rtc:StateHolderService" to="sh.rtc:StateHolderService"  subscription_type="new"/>
-    <rtconnect from="sh.rtc:baseTformOut" to="HrpsysSeqStateROSBridge0.rtc:baseTform" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)" unless="$(arg USE_WALKING)"/>
+    <rtconnect from="sh.rtc:baseTformOut" to="HrpsysSeqStateROSBridge0.rtc:baseTform" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)" if="$(arg USE_STATEHOLDERTFORM)"/>
     <rtconnect from="sh.rtc:qOut" to="HrpsysSeqStateROSBridge0.rtc:mcangle" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
     <rtconnect from="HrpsysSeqStateROSBridge0.rtc:SequencePlayerService" to="seq.rtc:SequencePlayerService" subscription_type="new"/>
     <rtconnect from="HrpsysJointTrajectoryBridge0.rtc:SequencePlayerService" to="seq.rtc:SequencePlayerService" subscription_type="new"/>
@@ -187,14 +188,14 @@
     <rtconnect from="kf.rtc:rpy" to="HrpsysSeqStateROSBridge0.rtc:baseRpy" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
     <rtconnect from="KalmanFilterServiceROSBridge.rtc:KalmanFilterService" to="kf.rtc:KalmanFilterService"  subscription_type="new"/>
 
-    <rtconnect from="abst.rtc:baseTformOut" to="HrpsysSeqStateROSBridge0.rtc:baseTform" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:controlSwingSupportTime" to="HrpsysSeqStateROSBridge0.rtc:controlSwingSupportTime" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:refCapturePoint" to="HrpsysSeqStateROSBridge0.rtc:rsrefCapturePoint" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:actCapturePoint" to="HrpsysSeqStateROSBridge0.rtc:rsactCapturePoint" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:refContactStates" to="HrpsysSeqStateROSBridge0.rtc:refContactStates" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <rtconnect from="abst.rtc:genBaseTform" to="HrpsysSeqStateROSBridge0.rtc:baseTform" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <!-- <rtconnect from="abst.rtc:controlSwingSupportTime" to="HrpsysSeqStateROSBridge0.rtc:controlSwingSupportTime" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/> -->
+    <rtconnect from="abst.rtc:baseFrameGenCp" to="HrpsysSeqStateROSBridge0.rtc:rsrefCapturePoint" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <rtconnect from="abst.rtc:baseFrameActCp" to="HrpsysSeqStateROSBridge0.rtc:rsactCapturePoint" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <rtconnect from="abst.rtc:genContactStates" to="HrpsysSeqStateROSBridge0.rtc:refContactStates" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
     <rtconnect from="abst.rtc:actContactStates" to="HrpsysSeqStateROSBridge0.rtc:actContactStates" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:originActZmp" to="HrpsysSeqStateROSBridge0.rtc:rszmp" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
-    <rtconnect from="abst.rtc:COPInfo" to="HrpsysSeqStateROSBridge0.rtc:rsCOPInfo" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <rtconnect from="abst.rtc:baseFrameActZmp" to="HrpsysSeqStateROSBridge0.rtc:rszmp" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
+    <rtconnect from="abst.rtc:eeOriginCopInfo" to="HrpsysSeqStateROSBridge0.rtc:rsCOPInfo" subscription_type="$(arg subscription_type)" push_policy="$(arg push_policy)" push_rate="$(arg push_rate)" buffer_length="$(arg buffer_length)"/>
 
     <rtconnect from="AutoBalanceStabilizerServiceROSBridge.rtc:AutoBalanceStabilizerService" to="abst.rtc:AutoBalanceStabilizerService"  subscription_type="new"/>
 
