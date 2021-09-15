@@ -222,7 +222,7 @@
    (let ((srv-fnames (send self :get-ROSBridge-srv-fnames ros-pkg-name)))
      (dolist (idl (send self :get-ROSBridge-idl-fnames ros-pkg-name))
        (let ((rtc-name (pathname-name idl)))
-         (dolist (srv-name (mapcar #'pathname-name (remove-if-not #'(lambda (x) (and (substringp rtc-name x) (not (= (char x 0) (char "." 0))))) srv-fnames)))
+         (dolist (srv-name (mapcar #'pathname-name (remove-if-not #'(lambda (x) (and (substringp (concatenate string "_" rtc-name) x) (not (= (char x 0) (char "." 0))))) srv-fnames)))
            (let ((method-def (send self :get-ROSBridge-method-def-macro rtc-name srv-name ros-pkg-name)))
              (when method-def
                (if debug-view (pprint (macroexpand method-def)))
@@ -1882,6 +1882,536 @@
    ()
    "Stop Stabilizer Mode."
    (send self :stabilizerservice_stopstabilizer)
+   )
+  )
+
+;; AutoBalancerService
+(def-set-get-param-method
+  'hrpsys_ros_bridge::Openhrp_AutoBalanceStabilizerService_GaitGeneratorParam
+  :raw-set-gait-generator-param-abst :get-gait-generator-param-abst :get-gait-generator-param-arguments-abst
+  :autobalancestabilizerservice_setgaitgeneratorparam :autobalancestabilizerservice_getgaitgeneratorparam)
+(def-set-get-param-method
+  'hrpsys_ros_bridge::Openhrp_AutoBalancestabilizerService_AutoBalancerParam
+  :raw-set-auto-balancer-param-abst :get-auto-balancer-param-abst :get-auto-balancer-param-arguments-abst
+  :autobalancestabilizerservice_setAutoBalancerparam :autobalancestabilizerservice_getAutoBalancerparam)
+(def-set-get-param-method
+  'hrpsys_ros_bridge::Openhrp_AutoBalanceStabilizerService_StabilizerParam
+  :raw-set-st-param-abst :get-st-param-abst :get-st-param-arguments-abst
+  :autobalancestabilizerservice_setStabilizerParam :autobalancestabilizerservice_getStabilizerParam)
+
+(defmethod rtm-ros-robot-interface
+  (:start-auto-balancer-abst
+   (&key (limbs (if (not (every #'null (send robot :arms)))
+                    '(:rleg :lleg :rarm :larm)
+                  '(:rleg :lleg))))
+   "startAutoBalancer.
+    If robot with arms, start auto balancer with legs and arms ik by default.
+    Otherwise, start auto balancer with legs ik by default."
+   (send self :autobalancestabilizerservice_startAutoBalancer
+         :limbs (mapcar #'(lambda (x) (format nil "~A" (string-downcase x))) limbs)))
+  (:stop-auto-balancer-abst
+   ()
+   "Stop auto balancer mode"
+   (send self :autobalancestabilizerservice_stopAutoBalancer))
+  (:go-pos-no-wait-abst
+   (xx yy th)
+   "Call goPos without wait."
+   (send self :autobalancestabilizerservice_goPos :x xx :y yy :th th))
+  (:go-pos-abst
+   (xx yy th)
+   "Call goPos with wait."
+   (send self :go-pos-no-wait-abst xx yy th)
+   (send self :wait-foot-steps-abst))
+  (:raw-get-foot-step-param-abst
+   ()
+   (send (send self :autobalancestabilizerservice_getfootstepparam) :i_param))
+  (:get-foot-step-params-abst
+   ()
+   "Get AutoBalancer foot step params."
+   (let ((param (send self :raw-get-foot-step-param-abst)))
+     (append
+      (mapcan #'(lambda (meth param-name) (list param-name (send self :abc-footstep->eus-footstep-abst (send param meth))))
+              '(:support_leg_coords :swing_leg_coords :swing_leg_src_coords :swing_leg_dst_coords :dst_foot_midcoords)
+              '(:support-leg-coords :swing-leg-coords :swing-leg-src-coords :swing-leg-dst-coords :dst-foot-midcoords))
+      (mapcan #'(lambda (meth param-name)
+                  (list param-name (send self :get-idl-enum-values
+                                         (send param meth)
+                                         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_SUPPORTLEGSTATE")))
+              '(:support_leg :support_leg_with_both)
+              '(:support-leg :support-leg-with-both)))
+     ))
+  (:get-foot-step-param-abst
+   (param-name)
+   "Get AutoBalancer foot step param by given name.
+    param-name is key word for parameters defined in IDL.
+    param-name should be :rleg-coords :lleg-coords :support-leg-coords :swing-leg-coords :swing-leg-src-coords :swing-leg-dst-coords :dst-foot-midcoords :support-leg :support-leg-with-both."
+   (if (memq param-name '(:support-leg-coords :swing-leg-coords :swing-leg-src-coords :swing-leg-dst-coords :dst-foot-midcoords :support-leg :support-leg-with-both))
+       (cadr (memq param-name (send self :get-foot-step-params-abst)))
+     (error ";; no such abc footstep param ~A~%" param-name))
+   )
+  (:set-foot-steps-no-wait-abst
+   (foot-step-list)
+   "Set foot step by default parameters and do not wait for step finish.
+    foot-step-list is list of footstep (only biped) or list of list of footstep."
+   (unless (listp (car foot-step-list))
+     (setq foot-step-list (mapcar #'(lambda (fs) (list fs)) foot-step-list)))
+   (send self :autobalancestabilizerservice_setfootsteps
+         :fss
+         (mapcar #'(lambda (fs)
+                     (instance hrpsys_ros_bridge::openhrp_autobalancestabilizerservice_footsteps :init
+                               :fs
+                               (mapcar #'(lambda (f)
+                                           (send self :eus-footstep->abc-footstep-abst f))
+                                       fs)))
+                 foot-step-list)))
+  (:set-foot-steps-abst
+   (foot-step-list)
+   "Set foot step by default parameters and wait for step finish.
+    foot-step-list is list of footstep (only biped) or list of list of footstep.
+    overwrite-footstep-index is index to be overwritten. overwrite_fs_idx is used only in walking."
+   (send self :set-foot-steps-no-wait-abst foot-step-list)
+   (send self :wait-foot-steps-abst))
+  (:set-foot-steps-roll-pitch
+   (angle &key (axis :x))
+   "Set foot steps with roll or pitch orientation.
+    angle is roll or pitch angle [deg].
+    axis is :x (roll) or :y (pitch)."
+   (let ((off (cadr (memq :default-half-offset (send robot :footstep-parameter))))
+         (fmcoords (midcoords 0.5 (send self :get-foot-step-param :rleg-coords) (send self :get-foot-step-param :lleg-coords))))
+     (send self :set-foot-steps-abst (list (make-coords :coords (send self :get-foot-step-param :rleg-coords) :name :rleg)
+                                           (make-coords :coords (send (send (make-coords :pos (copy-object (send fmcoords :worldpos))) :rotate (deg2rad angle) axis)
+                                                                      :translate off)
+                                                        :name :lleg)
+                                           (make-coords :coords (send (send (make-coords :pos (copy-object (send fmcoords :worldpos))) :rotate (deg2rad angle) axis)
+                                                                      :translate (scale -1 off))
+                                                        :name :rleg)))
+     ))
+  (:set-foot-steps-with-base-height-abst
+   (fs av-list time-list)
+   "Set foot steps with sending angle-vector."
+   (send self :set-foot-steps-no-wait-abst fs)
+   (send self :angle-vector-sequence av-list time-list)
+   (send self :wait-interpolation)
+   (send self :wait-foot-steps-abst)
+   )
+  (:set-foot-steps-with-param-and-base-height-abst
+   (fs-params av-list time-list)
+   "Set foot steps and params with sending angle-vector."
+   (send self :set-foot-steps-with-param-no-wait-abst fs-params)
+   (send self :angle-vector-sequence av-list time-list)
+   (send self :wait-interpolation)
+   (send self :wait-foot-steps-abst)
+   )
+  (:set-running-foot-steps-no-wait-abst
+   (foot-step-list)
+   "Set footsteps for run. Returns without waiting for whole steps to be executed.
+    foot-step-list is list of footstep (only biped) or list of list of footstep."
+   (unless (listp (car foot-step-list))
+     (setq foot-step-list (mapcar #'(lambda (fs) (list fs)) foot-step-list)))
+   (send self :autobalancestabilizerservice_setrunningfootsteps
+         :fss
+         (mapcar #'(lambda (fs)
+                     (instance hrpsys_ros_bridge::openhrp_autobalancestabilizerservice_footsteps :init
+                               :fs
+                               (mapcar #'(lambda (f)
+                                           (send self :eus-footstep->abc-footstep-abst f))
+                                       fs)))
+                 foot-step-list)))
+  (:set-running-foot-steps-abst
+   (foot-step-list)
+   "Set footsteps for run and wait for step finish.
+    foot-step-list is list of footstep (only biped) or list of list of footstep.
+    overwrite-footstep-index is index to be overwritten. overwrite_fs_idx is used only in walking."
+   (send self :set-running-foot-steps-no-wait-abst foot-step-list)
+   (send self :wait-foot-steps-abst))
+  (:set-jumping-foot-steps-no-wait-abst
+   (foot-step-list)
+   "Set footsteps for jump. Returns without waiting for whole steps to be executed.
+    foot-step-list is list of footstep (only biped) or list of list of footstep."
+   (unless (listp (car foot-step-list))
+     (setq foot-step-list (mapcar #'(lambda (fs) (list fs)) foot-step-list)))
+   (send self :autobalancestabilizerservice_setjumpingfootsteps
+         :fss
+         (mapcar #'(lambda (fs)
+                     (instance hrpsys_ros_bridge::openhrp_autobalancestabilizerservice_footsteps :init
+                               :fs
+                               (mapcar #'(lambda (f)
+                                           (send self :eus-footstep->abc-footstep-abst f))
+                                       fs)))
+                 foot-step-list)))
+  (:set-jumping-foot-steps-abst
+   (foot-step-list)
+   "Set footsteps for jump and wait for step finish.
+    foot-step-list is list of footstep (only biped) or list of list of footstep.
+    overwrite-footstep-index is index to be overwritten. overwrite_fs_idx is used only in walking."
+   (send self :set-jumping-foot-steps-no-wait-abst foot-step-list)
+   (send self :wait-foot-steps-abst))
+  (:go-stop-abst
+   ()
+   "Stop stepping."
+   (send self :autobalancestabilizerservice_goStop))
+  (:calc-go-velocity-param-from-velocity-center-offset-abst
+   (ang velocity-center-offset)
+   "Calculate go-velocity velocities from rotation center and rotation angle.
+    ang is rotation angle [rad]. velocity-center-offset is velocity center offset [mm] from foot mid coords."
+   (let* ((default-step-time (send (send self :get-gait-generator-param-abst) :default_step_time)) ;; [s]
+          (cen (make-cascoords :pos velocity-center-offset))
+          (cc (make-cascoords)))
+     (send cen :assoc cc)
+     (send cen :rotate (deg2rad ang) :z)
+     (let ((tf (send (make-coords) :transformation cc)))
+       (list
+        (/ (* 1e-3 (elt (send tf :worldpos) 0)) default-step-time) ;; velx [m/s]
+        (/ (* 1e-3 (elt (send tf :worldpos) 1)) default-step-time) ;; vely [m/s]
+        (/ ang default-step-time) ;; velth [rad/s]
+        ))))
+  (:wait-foot-steps-abst
+   ()
+   "Wait for whole footsteps are executed."
+   (send self :autobalancestabilizerservice_waitFootSteps))
+  ;; wrap :set-gait-generator-param to use symbol for default-orbit-type
+  (:set-gait-generator-param-abst
+   (&rest args
+    &key default-orbit-type
+         leg-default-translate-pos ;; [mm]
+         stride-parameter
+    &allow-other-keys)
+   "Set gait generator param.
+    For arguments, please see (send *ri* :get-gait-generator-param-arguments)."
+   (let ((gg-prm (if (or (memq :leg-default-translate-pos args) (memq :stride-parameter args)) (send self :get-gait-generator-param))))
+     (send* self :raw-set-gait-generator-param-abst
+            (append
+             (if (memq :default-orbit-type args)
+                 (list :default-orbit-type
+                       (if (or (null default-orbit-type) (integerp default-orbit-type))
+                           default-orbit-type
+                         (let ((ot (read-from-string (format nil "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_ORBITTYPE::*~A*" (string-downcase default-orbit-type)))))
+                           (if (boundp ot)
+                               (eval ot)
+                             (error ";; no such :default-orbit-type ~A in :set-gait-generator-param-abst~%" default-orbit-type))
+                           ))))
+             (if (memq :leg-default-translate-pos args)
+                 (let ((lo (copy-object (send gg-prm :leg_default_translate_pos))))
+                   (setq (lo . ros::_data) (scale 1e-3 (apply #'concatenate float-vector leg-default-translate-pos)))
+                   (list :leg-default-translate-pos lo)))
+             (if (memq :stride-parameter args)
+                 (let ((sprm (send gg-prm :stride_parameter)))
+                   (cond
+                    ((= (length sprm) (length stride-parameter)) ;; If same length
+                     (list :stride-parameter stride-parameter))
+                    ((< (length sprm) (length stride-parameter)) ;; If rtcd's length is shorter than argument's length
+                     (list :stride-parameter (subseq stride-parameter 0 (length sprm))))
+                    (t ;; If rtcd's length is longer than argument's length
+                     (list :stride-parameter (concatenate float-vector stride-parameter (subseq sprm (length stride-parameter))))))
+                   ))
+             args))))
+  (:print-gait-generator-orbit-type-abst
+   ()
+   "Print GaitGenerator orbit types."
+   (let ((cs (constants "" "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_ORBITTYPE")))
+     (mapcar #'(lambda (x) (format t ";; ~A => ~A~%" x (eval x))) cs)
+     t))
+  (:get-gait-generator-orbit-type-abst
+   ()
+   "Get GaitGenerator Orbit Type as Euslisp symbol."
+   (send self :get-idl-enum-values
+         (send (send self :get-gait-generator-param-abst) :default_orbit_type)
+         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_ORBITTYPE"))
+  (:calc-toe-heel-phase-ratio-abst
+   (toe-angle heel-angle double-support-ratio-half)
+   "Calculate vector for toe heel phase ratio.
+    Arguments:
+      toe-angle, heel-angle : max toe/heel angle [deg].
+      double-support-ratio-half : half of double support ratio in terms of toe heel phase ratio."
+   (let* ((remain-ratio (- 1 (* 2 double-support-ratio-half)))
+          (total-angle-diff (+ (* toe-angle 2.0) (* heel-angle 2.0)))
+          (ret
+           (list double-support-ratio-half
+                 (* remain-ratio (/ toe-angle total-angle-diff))
+                 (* remain-ratio (/ toe-angle total-angle-diff))
+                 0
+                 (* remain-ratio (/ heel-angle total-angle-diff))
+                 (* remain-ratio (/ heel-angle total-angle-diff))
+                 double-support-ratio-half)))
+     (concatenate float-vector ret)
+     ))
+  (:set-gait-generator-toe-heel-angles-abst
+   (toe-angle heel-angle double-support-ratio-half)
+   "Set toe-angle, heel-angle, and toe-heel-phase-ratio.
+    toe-heel-phase-ratio is automatically calculated.
+    Arguments:
+      toe-angle, heel-angle : max toe/heel angle [deg].
+      double-support-ratio-half : half of double support ratio in terms of toe heel phase ratio."
+   (send self :set-gait-generator-param-abst
+         :toe-angle toe-angle :heel-angle heel-angle
+         :toe-heel-phase-ratio (send self :calc-toe-heel-phase-ratio toe-angle heel-angle double-support-ratio-half)))
+  (:get-auto-balancer-controller-mode-abst
+   ()
+   "Get AutoBalancer ControllerMode as Euslisp symbol."
+   (send self :get-idl-enum-values
+         (send (send self :get-auto-balancer-param-abst) :controller_mode)
+         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_CONTROLLERMODE"))
+  ;; :get-auto-balancer-param and :set-auto-balancer-param is not defined by def-set-get-param-method yet.
+  (:get-auto-balancer-param-abst
+   ()
+   "Get AutoBalancer param."
+   (send (send self :autobalancerservice_getautobalancestabilizerparam) :i_param))
+  (:set-auto-balancer-param-abst
+   (&rest args
+    &key leg-names
+         default-zmp-offsets ;; [mm]
+         graspless-manip-arm
+         graspless-manip-reference-trans-pos ;; [mm]
+         graspless-manip-reference-trans-rot ;; rotation-matrix
+         use-force-mode
+    &allow-other-keys)
+   "Set AutoBalancer param.
+    For arguments, please see (send *ri* :get-auto-balancer-param-arguments)."
+   (send* self :raw-set-auto-balancer-param
+          (append
+           (if (and (memq :leg-names args) leg-names)
+               (list :leg-names (mapcar #'(lambda (x) (format nil "~A" (string-downcase x))) leg-names)))
+           (if (and (memq :default-zmp-offsets args) default-zmp-offsets)
+               (let ((dzo (copy-object (send (send self :get-auto-balancer-param-abst) :default_zmp_offsets)))
+                     (lnum (length (remove-if-not #'(lambda (x) (send robot x)) '(:rarm :larm :rleg :lleg)))))
+                 (setq (dzo . ros::_data)
+                       (apply #'concatenate float-vector (mapcar #'(lambda (x) (scale 1e-3 x))
+                                                                 (append default-zmp-offsets
+                                                                         (make-list (- lnum (length default-zmp-offsets))
+                                                                                    :initial-element (float-vector 0 0 0))))))
+                 (list :default-zmp-offsets dzo)))
+           (if (and (memq :graspless-manip-arm args) graspless-manip-arm)
+               (list :graspless-manip-arm (string-downcase graspless-manip-arm)))
+           (if (and (memq :graspless-manip-reference-trans-pos args) graspless-manip-reference-trans-pos)
+               (list :graspless-manip-reference-trans-pos (scale 1e-3 graspless-manip-reference-trans-pos)))
+           (if (and (memq :graspless-manip-reference-trans-rot args) graspless-manip-reference-trans-rot)
+               (list :graspless-manip-reference-trans-rot (matrix2quaternion graspless-manip-reference-trans-rot)))
+           (if (memq :use-force-mode args)
+               (list :use-force-mode
+                     (if (or (null use-force-mode) (integerp use-force-mode))
+                         use-force-mode
+                       (let ((ot (read-from-string (format nil "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_USEFORCEMODE::*~A*" (substitute (elt "_" 0) (elt "-" 0) (string-downcase use-force-mode))))))
+                         (if (boundp ot)
+                             (eval ot)
+                           (error ";; no such :use-force-mode ~A in :set-auto-balancer-param-abst~%" use-force-mode))
+                         ))))
+           args)))
+  (:print-auto-balancer-use-force-mode-abst
+   ()
+   "Print AutoBalancer UseForceMode."
+   (let ((cs (constants "" "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_USEFORCEMODE")))
+     (mapcar #'(lambda (x) (format t ";; ~A => ~A~%" x (eval x))) cs)
+     t))
+  (:get-auto-balancer-use-force-mode-abst
+   ()
+   "Get AutoBalancer UseForceMode as Euslisp symbol."
+   (send self :get-idl-enum-values
+         (send (send self :get-auto-balancer-param-abst) :use_force_mode)
+         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_USEFORCEMODE"))
+  (:abc-footstep->eus-footstep-abst
+   (f)
+   (make-coords :pos (scale 1e3 (send f :pos))
+                :rot (quaternion2matrix (send f :rot))
+                :name (read-from-string (format nil ":~A" (send f :leg))))
+   )
+  (:eus-footstep->abc-footstep-abst
+   (f)
+   (instance hrpsys_ros_bridge::openhrp_autobalancerservice_footstep :init
+             :pos (scale 1e-3 (send f :worldpos))
+             :rot (matrix2quaternion (send f :worldrot))
+             :leg (string-downcase (if (find-method f :l/r) (send f :l/r) (send f :name))))
+   )
+  (:calc-dvel-with-velocity-center-offset-abst
+   (ang velocity-center-offset)
+   "Calculate velocity params for rotating with given velocity center offset.
+    Ang : [deg], offset vector [mm]"
+   (let* ((default-step-time (send (send self :get-gait-generator-param-abst) :default_step_time))
+          (cen (make-cascoords :pos velocity-center-offset))
+          (cc (make-cascoords)))
+     (send cen :assoc cc)
+     (send cen :rotate (deg2rad ang) :z)
+     (let ((tf (send (make-coords) :transformation cc)))
+       (list
+        (/ (* 1e-3 (elt (send tf :worldpos) 0)) default-step-time)
+        (/ (* 1e-3 (elt (send tf :worldpos) 1)) default-step-time)
+        (/ ang default-step-time)
+        ))))
+  (:set-default-step-time-with-the-same-swing-time-abst
+   (default-step-time)
+   "Set default step time with the same swing time."
+   (let* ((ggp (send self :get-gait-generator-param-abst))
+          (prev-default-step-time (send ggp :default_step_time))
+          (prev-default-double-support-ratio (send ggp :default_double_support_ratio))
+          (swing-time (* (- 1.0 prev-default-double-support-ratio) prev-default-step-time))
+          (new-default-double-support-ratio (- 1.0 (/ swing-time default-step-time))))
+     (if (>= swing-time default-step-time)
+         (error ";; default step time(~A[s]) should be greater than swing time(~A[s])~%" default-step-time swing-time))
+     (send self :set-gait-generator-param-abst
+           :default-step-time default-step-time
+           :default-double-support-ratio new-default-double-support-ratio)
+     )
+   )
+  (:start-graspless-manip-mode-abst
+   (robot arm)
+   "Start graspless manip mode while walking.
+    robot is robot instance which angle-vector is for graspless manip.
+    arm is used arm (:rarm, :larm, :arms)."
+   (let ((crds (if (eq arm :arms)
+                   (send self :calc-hand-trans-coords-dual-arms-abst robot)
+                 (send self :calc-hand-trans-coords-single-arm-abst robot arm)
+                 )))
+     (send self :set-auto-balancer-param-abst
+           :graspless-manip-arm arm
+           :graspless-manip-mode t :is-hand-fix-mode t
+           :graspless-manip-reference-trans-rot (send crds :worldrot)
+           :graspless-manip-reference-trans-pos (send crds :worldpos)
+           )))
+  (:stop-graspless-manip-mode-abst
+   ()
+   "Stop graspless manip mode while walking."
+   (send self :set-auto-balancer-param-abst :graspless-manip-mode nil))
+  (:calc-hand-trans-coords-dual-arms-abst
+   (robot)
+   "Calculate foot->hand coords transformation for dual-arm graspless manipulation."
+   (let* ((fc (send robot :foot-midcoords))
+          (arm-pos (mapcar #'(lambda (x) (send fc :inverse-transform-vector (send robot x :end-coords :worldpos))) '(:larm :rarm)))
+          (yy (apply #'v- arm-pos)))
+     (setf (elt yy 2) 0)
+     (setq yy (normalize-vector yy))
+     (make-coords :pos (apply #'midpoint 0.5 arm-pos)
+                  :rot (transpose (make-matrix 3 3 (list (v* yy (float-vector 0 0 1))
+                                                         yy
+                                                         (float-vector 0 0 1)))))))
+  (:calc-hand-trans-coords-single-arm-abst
+   (robot arm)
+   "Calculate foot->hand coords transformation for single-arm graspless manipulation."
+   (send (send robot :foot-midcoords) :transformation (send robot arm :end-coords)))
+
+  (:set-st-param-abst
+   (&rest args
+    &key st-algorithm
+         eefm-pos-damping-gain eefm-rot-damping-gain eefm-pos-time-const-support eefm-rot-time-const eefm-swing-pos-spring-gain eefm-swing-pos-time-const eefm-swing-rot-spring-gain eefm-swing-rot-time-const eefm-ee-forcemoment-distribution-weight
+    &allow-other-keys)
+   "Set Stabilizer parameters.
+    For arguments, please see (send *ri* :get-st-param-arguments)."
+   (unless (send self :get :default-st-param-abst)
+     (send self :put :default-st-param-abst (send self :get-st-param-abst)))
+   (let ((prm (send self :get-st-param-abst)))
+     (send* self :raw-set-st-param-abst
+            (append
+             (if (memq :st-algorithm args)
+                 (list :st-algorithm
+                       (if (or (null st-algorithm) (integerp st-algorithm))
+                           st-algorithm
+                         (let ((sa (read-from-string (format nil "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_STALGORITHM::*~A*" (string-downcase st-algorithm)))))
+                           (if (boundp sa)
+                               (eval sa)
+                             (error ";; no such :st-algorithm ~A in :set-st-param~%" st-algorithm))))))
+             (if (and (memq :eefm-pos-damping-gain args) eefm-pos-damping-gain)
+                 (let ((tmp (send prm :eefm_pos_damping_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-pos-damping-gain))
+                   (list :eefm-pos-damping-gain tmp)))
+             (if (and (memq :eefm-rot-damping-gain args) eefm-rot-damping-gain)
+                 (let ((tmp (send prm :eefm_rot_damping_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-rot-damping-gain))
+                   (list :eefm-rot-damping-gain tmp)))
+             (if (and (memq :eefm-rot-time-const args) eefm-rot-time-const)
+                 (let ((tmp (send prm :eefm_rot_time_const)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-rot-time-const))
+                   (list :eefm-rot-time-const tmp)))
+             (if (and (memq :eefm-pos-time-const-support args) eefm-pos-time-const-support)
+                 (let ((tmp (send prm :eefm_pos_time_const_support)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-pos-time-const-support))
+                   (list :eefm-pos-time-const-support tmp)))
+             (if (and (memq :eefm-swing-pos-spring-gain args) eefm-swing-pos-spring-gain)
+                 (let ((tmp (send prm :eefm_swing_pos_spring_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-swing-pos-spring-gain))
+                   (list :eefm-swing-pos-spring-gain tmp)))
+             (if (and (memq :eefm-swing-pos-time-const args) eefm-swing-pos-time-const)
+                 (let ((tmp (send prm :eefm_swing_pos_time_const)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-swing-pos-time-const))
+                   (list :eefm-swing-pos-time-const tmp)))
+             (if (and (memq :eefm-swing-rot-spring-gain args) eefm-swing-rot-spring-gain)
+                 (let ((tmp (send prm :eefm_swing_rot_spring_gain)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-swing-rot-spring-gain))
+                   (list :eefm-swing-rot-spring-gain tmp)))
+             (if (and (memq :eefm-swing-rot-time-const args) eefm-swing-rot-time-const)
+                 (let ((tmp (send prm :eefm_swing_rot_time_const)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-swing-rot-time-const))
+                   (list :eefm-swing-rot-time-const tmp)))
+             (if (and (memq :eefm-ee-forcemoment-distribution-weight args) eefm-ee-forcemoment-distribution-weight)
+                 (let ((tmp (send prm :eefm_ee_forcemoment_distribution_weight)))
+                   (setq (tmp . ros::_data) (apply #'concatenate float-vector eefm-ee-forcemoment-distribution-weight))
+                   (list :eefm-ee-forcemoment-distribution-weight tmp)))
+             args))))
+  (:set-st-param-for-non-feedback-LIP-mode-abst
+   ()
+   "Set Stabilizer parameters to make robot Linear Inverted Pendulum mode without state feedback.
+    By using this mode, robot feets adapt to ground surface."
+   (send self :set-st-param-abst
+         :eefm-body-attitude-control-gain #F(0 0)
+         :eefm-wrench-alpha-blending 1.0
+         :eefm-k1 #f(0 0)
+         :eefm-k2 #f(0 0)
+         :eefm-k3 #f(0 0))
+   )
+  (:set-default-st-param-abst
+   ()
+   "Set Stabilzier parameter by default parameters."
+   (unless (send self :get :default-st-param-abst)
+     (send self :put :default-st-param-abst (send self :get-st-param-abst)))
+   (send self :autobalancestabilizerservice_setparameter :i_param (send self :get :default-st-param-abst))
+   )
+  (:set-st-param-by-ratio-abst
+   (state-feedback-gain-ratio
+    damping-control-gain-ratio
+    attitude-control-gain-ratio)
+   "Set Stabilzier parameter by ratio from default parameters.
+    state-feedback-gain-ratio is ratio for state feedback gain.
+    damping-control-gain-ratio is ratio for damping control gain.
+    attitude-control-gain-ratio is ratio for attitude control gain.
+    When ratio = 1, parameters are same as default parameters.
+    For state-feedback-gain-ratio and attitude-control-gain-ratio,
+    when ratio < 1 Stabilzier works less feedback control and less oscillation and when ratio > 1 more feedback and more oscillation.
+    For dampnig-control-gain-ratio,
+    when ratio > 1 feet behavior becomes hard and safe and when ratio < 1 soft and dangerous."
+   (unless (send self :get :default-st-param-abst)
+     (send self :put :default-st-param-abst (send self :get-st-param-abst)))
+   (let ((stp (send self :get :default-st-param-abst)))
+     (send self :set-st-param-abst
+           ;; state feedback gain
+           :eefm-k1 (scale state-feedback-gain-ratio (send stp :eefm_k1))
+           :eefm-k2 (scale state-feedback-gain-ratio (send stp :eefm_k2))
+           :eefm-k3 (scale state-feedback-gain-ratio (send stp :eefm_k3))
+           ;; damping control gain
+           :eefm-pos-damping-gain (* damping-control-gain-ratio (send stp :eefm_pos_damping_gain))
+           :eefm-rot-damping-gain (* damping-control-gain-ratio (send stp :eefm_rot_damping_gain))
+           :eefm-pos-time-const-support (/ (send stp :eefm_pos_time_const_support) damping-control-gain-ratio)
+           :eefm-rot-time-const (/ (send stp :eefm_rot_time_const) damping-control-gain-ratio)
+           ;; body attitude control gain
+           :eefm-body-attitude-control-gain (scale attitude-control-gain-ratio (send stp :eefm_body_attitude_control_gain)))
+     ))
+  (:get-st-controller-mode-abst
+   ()
+   "Get Stabilizer ControllerMode as Euslisp symbol."
+   (send self :get-idl-enum-values
+         (send (send self :get-st-param-abst) :controller_mode)
+         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_CONTROLLERMODE"))
+  (:get-st-algorithm-abst
+   ()
+   "Get Stabilizer Algorithm as Euslisp symbol."
+   (send self :get-idl-enum-values
+         (send (send self :get-st-param-abst) :st_algorithm)
+         "HRPSYS_ROS_BRIDGE::OPENHRP_AUTOBALANCESTABILIZERSERVICE_STALGORITHM"))
+  (:start-st-abst
+   ()
+   "Start Stabilizer Mode."
+   (send self :autobalancestabilizerservice_startstabilizer)
+   )
+  (:stop-st-abst
+   ()
+   "Stop Stabilizer Mode."
+   (send self :autobalancestabilizerservice_stopstabilizer)
    )
   )
 
