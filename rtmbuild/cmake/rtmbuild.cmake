@@ -137,14 +137,15 @@ macro(rtmbuild_init)
     rosbuild_gensrv()
   endif()
 
-  include_directories( ${openhrp3_INCLUDE_DIRS} ${openrtm_aist_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
   # since catkin > 0.7.0, the CPATH is no longer being set by catkin, so rtmbuild manually add them
   set(_cmake_prefix_path_tmp $ENV{CMAKE_PREFIX_PATH})
   string(REPLACE ":" ";" _cmake_prefix_path_tmp ${_cmake_prefix_path_tmp})
   foreach(_cmake_prefix_path ${_cmake_prefix_path_tmp})
     include_directories(${_cmake_prefix_path}/include)
+    link_directories(${_cmake_prefix_path}/lib)
   endforeach()
 
+  include_directories(${openhrp3_INCLUDE_DIRS} ${openrtm_aist_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
   link_directories(${openhrp3_LIBRARY_DIRS} ${openrtm_aist_LIBRARY_DIRS} ${catkin_LIBRARY_DIRS})
 
 endmacro(rtmbuild_init)
